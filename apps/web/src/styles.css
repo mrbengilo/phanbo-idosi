@@ -3349,3 +3349,24 @@ body.dialog-open {
   color: #64748b;
   font-size: 12px;
 }
+
+/* Stronger specificity: global form label rules otherwise stack checkbox and
+   name vertically inside the product checklist. */
+.product-check-list .product-check {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: flex-start;
+}
+.product-check-list label.product-check__label {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 10px;
+  margin: 0;
+  text-align: left;
+  flex: 0 1 auto;
+}
+.product-check-list .product-check__qty {
+  margin-left: auto;
+}
