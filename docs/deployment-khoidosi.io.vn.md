@@ -14,13 +14,13 @@ Không lưu mật khẩu, token registry, khóa SSH hoặc file môi trường p
 
 ## Biến môi trường
 
-Tạo file chỉ đọc bởi root, ví dụ `/etc/khohang-idosi/production.env`, từ `.env.example`.
+Tạo file chỉ đọc bởi root, ví dụ `/etc/phanbo-idosi/production.env`, từ `.env.example`.
 Các giá trị tối thiểu phải được thay bằng giá trị production:
 
 ```dotenv
 APP_DOMAIN=khoidosi.io.vn
 WEB_ORIGIN=https://khoidosi.io.vn
-IMAGE_PREFIX=local/khohang-idosi
+IMAGE_PREFIX=local/phanbo-idosi
 IMAGE_TAG=<FULL_COMMIT_SHA>
 POSTGRES_PASSWORD=<RANDOM_LONG_SECRET>
 DATABASE_URL=postgresql://idosi:<URL_ENCODED_PASSWORD>@db:5432/idosi
@@ -41,15 +41,15 @@ release_sha="$(git rev-parse HEAD)"
 test "${#release_sha}" -eq 40
 docker version
 docker compose version
-docker compose --env-file /etc/khohang-idosi/production.env config --quiet
+docker compose --env-file /etc/phanbo-idosi/production.env config --quiet
 ```
 
 Đảm bảo `IMAGE_TAG` trong file môi trường đúng bằng `release_sha`. Trước lần triển khai thay thế,
 tạo backup đã kiểm tra checksum:
 
 ```bash
-sudo install -d -m 700 /var/backups/khohang-idosi
-sudo ./infra/scripts/backup-db.sh --output-dir /var/backups/khohang-idosi
+sudo install -d -m 700 /var/backups/phanbo-idosi
+sudo ./infra/scripts/backup-db.sh --output-dir /var/backups/phanbo-idosi
 ```
 
 Lần triển khai đầu tiên chưa có database đang chạy thì bỏ qua bước backup.
@@ -62,7 +62,7 @@ VPS build ảnh bất biến từ đúng checkout; `--pull never` ngăn Compose 
 
 ```bash
 set -euo pipefail
-env_file=/etc/khohang-idosi/production.env
+env_file=/etc/phanbo-idosi/production.env
 
 docker compose --env-file "$env_file" build --pull api migrate worker web
 docker compose --env-file "$env_file" up --detach --pull never --wait db
@@ -81,7 +81,7 @@ Chỉ chạy một lần qua terminal riêng tư. Không đưa mật khẩu vào
 
 ```bash
 docker compose \
-  --env-file /etc/khohang-idosi/production.env \
+  --env-file /etc/phanbo-idosi/production.env \
   --profile bootstrap run --rm --no-deps --pull never bootstrap-admin
 ```
 

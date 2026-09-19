@@ -118,7 +118,7 @@ jobs:
       - name: Validate infrastructure sources
         env:
           APP_DOMAIN: localhost
-          IMAGE_PREFIX: local/khohang-idosi
+          IMAGE_PREFIX: local/phanbo-idosi
           IMAGE_TAG: 0000000000000000000000000000000000000000
           POSTGRES_PASSWORD: idosi_ci_password
         run: |
@@ -137,7 +137,7 @@ jobs:
       - name: Build production container targets
         env:
           APP_DOMAIN: localhost
-          IMAGE_PREFIX: local/khohang-idosi
+          IMAGE_PREFIX: local/phanbo-idosi
           IMAGE_TAG: 0000000000000000000000000000000000000000
           POSTGRES_PASSWORD: idosi_ci_password
         run: docker compose --file docker-compose.yml build api migrate worker web
@@ -149,7 +149,7 @@ jobs:
           BOOTSTRAP_ADMIN_PASSWORD: ci-container-bootstrap-password
           BOOTSTRAP_ADMIN_USERNAME: ci.container.admin
           DATABASE_URL: postgresql://idosi:idosi_ci_password@db:5432/idosi
-          IMAGE_PREFIX: local/khohang-idosi
+          IMAGE_PREFIX: local/phanbo-idosi
           IMAGE_TAG: 0000000000000000000000000000000000000000
           POSTGRES_PASSWORD: idosi_ci_password
         run: |
