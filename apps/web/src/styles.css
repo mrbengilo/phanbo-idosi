@@ -937,6 +937,172 @@ td small {
   padding: 8px 10px;
 }
 
+.priority-overlay__backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 90;
+  display: grid;
+  place-items: center;
+  background: rgba(15, 23, 42, 0.74);
+  padding: 24px;
+}
+.priority-overlay {
+  position: relative;
+  display: flex;
+  width: min(720px, 100%);
+  max-height: calc(100vh - 48px);
+  flex-direction: column;
+  gap: 16px;
+  overflow: auto;
+  border-radius: 22px;
+  background: #16a34a;
+  color: white;
+  padding: 36px 40px 32px;
+  box-shadow: 0 32px 80px rgba(0, 0, 0, 0.45);
+}
+.priority-overlay__close {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  border: 1px solid rgba(255, 255, 255, 0.42);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.12);
+  color: white;
+}
+.priority-overlay__top {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  padding-right: 40px;
+}
+.priority-overlay__badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.16);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.09em;
+  padding: 7px 13px;
+}
+.priority-overlay__timer {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  border-radius: 999px;
+  background: white;
+  color: #0a7a33;
+  font-size: 26px;
+  font-variant-numeric: tabular-nums;
+  font-weight: 800;
+  padding: 8px 18px;
+}
+.priority-overlay__timer--warning {
+  background: #fef3c7;
+  color: #b45309;
+}
+.priority-overlay__timer--danger {
+  background: #fee2e2;
+  color: #b91c1c;
+}
+.priority-overlay__pager {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 700;
+}
+.priority-overlay__pager button {
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border: 1px solid rgba(255, 255, 255, 0.42);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.12);
+  color: white;
+}
+.priority-overlay__pager button:disabled {
+  opacity: 0.45;
+}
+.priority-overlay__title {
+  font-size: clamp(24px, 4.2vw, 36px);
+  line-height: 1.22;
+  margin: 0;
+}
+.priority-overlay__meta {
+  color: rgba(255, 255, 255, 0.86);
+  font-size: 14px;
+  margin: 0;
+}
+.priority-overlay__note {
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.14);
+  font-size: 14px;
+  font-weight: 600;
+  margin: 0;
+  padding: 12px 14px;
+}
+.priority-overlay__note--error {
+  background: #fff7ed;
+  color: #9a3412;
+}
+.priority-overlay__actions {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 4px;
+}
+.priority-overlay__open {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  width: 100%;
+  min-height: 56px;
+  border: 0;
+  border-radius: 14px;
+  background: white;
+  color: #0a7a33;
+  font-size: 18px;
+  font-weight: 800;
+}
+.priority-overlay__respond {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+.priority-overlay__respond .button {
+  min-height: 52px;
+  font-size: 16px;
+}
+.priority-overlay__respond .button--secondary {
+  border-color: rgba(255, 255, 255, 0.5);
+  background: rgba(255, 255, 255, 0.12);
+  color: white;
+}
+@media (max-width: 640px) {
+  .priority-overlay__backdrop {
+    padding: 12px;
+  }
+  .priority-overlay {
+    width: 100%;
+    padding: 26px 22px 24px;
+  }
+  .priority-overlay__timer {
+    font-size: 21px;
+  }
+  .priority-overlay__respond {
+    grid-template-columns: 1fr;
+  }
+}
+
 .permission-card,
 .quota-card,
 .policy-card,

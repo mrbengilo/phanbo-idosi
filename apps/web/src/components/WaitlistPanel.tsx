@@ -26,6 +26,7 @@ import { EmptyState } from './EmptyState';
 import { PriorityOffer } from './PriorityOffer';
 
 interface WaitlistPanelProps {
+  readonly initialFocusTicketId?: string | null;
   readonly productNameById: ReadonlyMap<string, string>;
   readonly role: Role;
   readonly scopeStoreId?: string;
@@ -79,6 +80,7 @@ function messageOf(cause: unknown, fallback: string): string {
 }
 
 export function WaitlistPanel({
+  initialFocusTicketId = null,
   productNameById,
   role,
   scopeStoreId,
@@ -110,7 +112,7 @@ export function WaitlistPanel({
     queryKey: offerQueryKey,
     retry: false,
   });
-  const [historyTicketId, setHistoryTicketId] = useState<string | null>(null);
+  const [historyTicketId, setHistoryTicketId] = useState<string | null>(initialFocusTicketId);
   const [cancelTarget, setCancelTarget] = useState<WaitTicket | null>(null);
   const [cancelReason, setCancelReason] = useState('');
   const [busyOffer, setBusyOffer] = useState<{

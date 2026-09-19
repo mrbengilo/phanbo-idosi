@@ -23,6 +23,7 @@ import {
 import { useEffect, useMemo, useState } from 'react';
 import { Navigate, NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { DashboardSkeleton } from './Skeleton';
+import { PriorityOfferOverlay } from './PriorityOfferOverlay';
 import { ApiClientError, getStoreKind, logout, mockModeEnabled } from '../lib/api';
 import { canAccessRoute } from '../lib/access';
 import { clearAuthenticatedSession, useSession } from '../lib/auth';
@@ -305,6 +306,7 @@ export function AppShell() {
       <main className="app-main" key={location.pathname}>
         <Outlet context={{ role, storeKind }} />
       </main>
+      <PriorityOfferOverlay role={role} />
       <nav aria-label="Điều hướng mobile" className="mobile-bottom-nav">
         {links.slice(0, 4).map(({ icon: Icon, label, to }) => (
           <NavLink end={to === '/'} key={to} to={to}>

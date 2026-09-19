@@ -28,7 +28,7 @@ import {
   X,
 } from 'lucide-react';
 import { useMemo, useRef, useState, type FormEvent } from 'react';
-import { useOutletContext } from 'react-router-dom';
+import { useLocation, useOutletContext } from 'react-router-dom';
 import type { AppOutletContext } from '../components/AppShell';
 import { Badge } from '../components/Badge';
 import { Button } from '../components/Button';
@@ -504,6 +504,10 @@ function ProductionAllocationOversight({ role }: Pick<AppOutletContext, 'role'>)
     retry: false,
   });
   const [showCreateForm, setShowCreateForm] = useState(false);
+  const location = useLocation();
+  const focusWaitTicketId = (location.state as { focusWaitTicketId?: unknown } | null)
+    ?.focusWaitTicketId;
+  const initialFocusTicketId = typeof focusWaitTicketId === 'string' ? focusWaitTicketId : null;
   const [draft, setDraft] = useState<OrderSessionDraft>(() => defaultOrderSessionDraft());
   const [cancelTarget, setCancelTarget] = useState<OrderSession | null>(null);
   const [cancelReason, setCancelReason] = useState('');
@@ -1231,6 +1235,7 @@ function ProductionAllocationOversight({ role }: Pick<AppOutletContext, 'role'>)
         </section>
       ) : null}
       <WaitlistPanel
+        initialFocusTicketId={initialFocusTicketId}
         productNameById={productNameById}
         role={role}
         storeNameById={storeNameById}
