@@ -1,4 +1,5 @@
 import { Clock3, Plus, RotateCcw, Send, Trash2 } from 'lucide-react';
+import clsx from 'clsx';
 import { useQuery } from '@tanstack/react-query';
 import { useMemo, useRef, useState } from 'react';
 import { useOutletContext } from 'react-router-dom';
@@ -225,8 +226,6 @@ function ProductionRequestsPage({ role, storeKind }: AppOutletContext) {
   });
   const [selectedStoreId, setSelectedStoreId] = useState('');
   const [selectedSessionId, setSelectedSessionId] = useState('');
-  const [selectedProductId, setSelectedProductId] = useState('');
-  const [quantity, setQuantity] = useState(1);
   const [lineNote, setLineNote] = useState('');
   const [draftLines, setDraftLines] = useState<ProductionDraftLine[]>([]);
   const [notice, setNotice] = useState<RequestNotice | null>(null);
@@ -268,29 +267,6 @@ function ProductionRequestsPage({ role, storeKind }: AppOutletContext) {
   const resetMutationKey = () => {
     idempotencyKey.current = null;
     setNotice(null);
-  };
-
-  const addLine = () => {
-    const productId = selectedProductId || activeProducts[0]?.id;
-    if (!productId || !Number.isSafeInteger(quantity) || quantity <= 0) return;
-    setDraftLines((current) => {
-      const existing = current.find((line) => line.productId === productId);
-      if (existing) {
-        return current.map((line) =>
-          line.productId === productId
-            ? {
-                ...line,
-                quantity: line.quantity + quantity,
-                note: lineNote.trim() || line.note,
-              }
-            : line,
-        );
-      }
-      return [...current, { productId, quantity, note: lineNote.trim() }];
-    });
-    setQuantity(1);
-    setLineNote('');
-    resetMutationKey();
   };
 
   const submit = async () => {
@@ -506,37 +482,104 @@ function ProductionRequestsPage({ role, storeKind }: AppOutletContext) {
             </div>
           </div>
           <div className="form-grid">
-            <label>
+            <div className="form-grid__wide">
               Mặt hàng
-              <select
-                disabled={formDisabled || !activeSession || remainingSlots === 0}
-                onChange={(event) => {
-                  setSelectedProductId(event.target.value);
-                  resetMutationKey();
-                }}
-                value={selectedProductId || activeProducts[0]?.id || ''}
-              >
-                {activeProducts.map((item) => (
-                  <option key={item.id} value={item.id}>
-                    {item.name}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label>
-              Số bao
-              <input
-                disabled={formDisabled || !activeSession || remainingSlots === 0}
-                max="100000"
-                min="1"
-                onChange={(event) => {
-                  setQuantity(event.target.valueAsNumber || 1);
-                  resetMutationKey();
-                }}
-                type="number"
-                value={quantity}
-              />
-            </label>
+              <div className="product-check-list">
+                {activeProducts.map((item) => {
+                  const line = draftLines.find((candidate) => candidate.productId === item.id);
+                  const selected = line !== undefined;
+                  const disabled = formDisabled || !activeSession || remainingSlots === 0;
+                  return (
+                    <div
+                      className={clsx('product-check', selected && 'product-check--selected')}
+                      key={item.id}
+                    >
+                      <label className="product-check__label">
+                        <input
+                          checked={selected}
+                          disabled={disabled}
+                          onChange={(event) => {
+                            resetMutationKey();
+                            if (event.target.checked) {
+                              setDraftLines((current) => [
+                                ...current,
+                                { productId: item.id, quantity: 1, note: lineNote },
+                              ]);
+                            } else {
+                              setDraftLines((current) =>
+                                current.filter((candidate) => candidate.productId !== item.id),
+                              );
+                            }
+                          }}
+                          type="checkbox"
+                        />
+                        <span>{item.name}</span>
+                      </label>
+                      {selected && line ? (
+                        <div className="qty-stepper">
+                          <button
+                            aria-label={`Giảm số bao ${item.name}`}
+                            disabled={disabled || line.quantity <= 1}
+                            onClick={() => {
+                              resetMutationKey();
+                              setDraftLines((current) =>
+                                current.map((candidate) =>
+                                  candidate.productId === item.id
+                                    ? {
+                                        ...candidate,
+                                        quantity: Math.max(1, candidate.quantity - 1),
+                                      }
+                                    : candidate,
+                                ),
+                              );
+                            }}
+                            type="button"
+                          >
+                            −
+                          </button>
+                          <input
+                            aria-label={`Số bao ${item.name}`}
+                            disabled={disabled}
+                            min="1"
+                            onChange={(event) => {
+                              resetMutationKey();
+                              const next = Math.max(1, event.target.valueAsNumber || 1);
+                              setDraftLines((current) =>
+                                current.map((candidate) =>
+                                  candidate.productId === item.id
+                                    ? { ...candidate, quantity: next }
+                                    : candidate,
+                                ),
+                              );
+                            }}
+                            type="number"
+                            value={line.quantity}
+                          />
+                          <button
+                            aria-label={`Tăng số bao ${item.name}`}
+                            disabled={disabled}
+                            onClick={() => {
+                              resetMutationKey();
+                              setDraftLines((current) =>
+                                current.map((candidate) =>
+                                  candidate.productId === item.id
+                                    ? { ...candidate, quantity: candidate.quantity + 1 }
+                                    : candidate,
+                                ),
+                              );
+                            }}
+                            type="button"
+                          >
+                            +
+                          </button>
+                          <span className="qty-stepper__unit">bao</span>
+                        </div>
+                      ) : null}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
             <label className="form-grid__wide">
               Ghi chú mặt hàng
               <textarea
@@ -552,14 +595,6 @@ function ProductionRequestsPage({ role, storeKind }: AppOutletContext) {
               />
             </label>
           </div>
-          <Button
-            disabled={
-              formDisabled || !activeSession || remainingSlots === 0 || activeProducts.length === 0
-            }
-            onClick={addLine}
-          >
-            <Plus aria-hidden="true" size={16} /> Thêm mặt hàng
-          </Button>
         </section>
 
         <section className="panel request-summary">

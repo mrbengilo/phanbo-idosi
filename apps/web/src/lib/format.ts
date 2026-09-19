@@ -3,8 +3,8 @@ export const formatInteger = (value: number): string =>
 
 export const formatKg = (value: number): string =>
   `${new Intl.NumberFormat('vi-VN', {
-    minimumFractionDigits: value % 1 === 0 ? 0 : 3,
-    maximumFractionDigits: 3,
+    minimumFractionDigits: 0,
+    maximumFractionDigits: value % 1 === 0 ? 0 : 2,
   }).format(value)} kg`;
 
 export const formatVnd = (value: number | null): string =>

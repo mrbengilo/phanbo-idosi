@@ -1,0 +1,23 @@
+{
+  "name": "Kho hàng IDOSI",
+  "short_name": "IDOSI Kho",
+  "description": "Quản trị kho và phân bổ hàng hóa IDOSI",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#4f46e5",
+  "icons": [
+    {
+      "src": "/icons/idosi-kho-app-1024.png",
+      "sizes": "1024x1024",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/idosi-kho-app-1024.png",
+      "sizes": "1024x1024",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ]
+}

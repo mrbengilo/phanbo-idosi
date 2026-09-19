@@ -1,4 +1,4 @@
-import { ArrowRight, Boxes, LockKeyhole, User } from 'lucide-react';
+import { ArrowRight, Boxes, Eye, EyeOff, LockKeyhole, User } from 'lucide-react';
 import { useQueryClient } from '@tanstack/react-query';
 import { type FormEvent, useState } from 'react';
 import { Navigate, useLocation, useNavigate } from 'react-router-dom';
@@ -14,6 +14,7 @@ export function LoginPage() {
   const sessionQuery = useSession();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const returnPath = safeReturnPath((location.state as { from?: unknown } | null)?.from);
 
   const submit = async (event: FormEvent<HTMLFormElement>) => {
@@ -102,8 +103,20 @@ export function LoginPage() {
                 autoComplete="current-password"
                 name="password"
                 placeholder="Mật khẩu"
-                type="password"
+                type={showPassword ? 'text' : 'password'}
               />
+              <button
+                aria-label={showPassword ? 'Ẩn mật khẩu' : 'Hiện mật khẩu'}
+                className="password-toggle"
+                onClick={() => setShowPassword((value) => !value)}
+                type="button"
+              >
+                {showPassword ? (
+                  <EyeOff aria-hidden="true" size={18} />
+                ) : (
+                  <Eye aria-hidden="true" size={18} />
+                )}
+              </button>
             </div>
           </label>
           <Button busy={busy || (!mockModeEnabled && sessionQuery.isPending)} type="submit">

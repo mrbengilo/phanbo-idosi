@@ -12,6 +12,8 @@ import type {
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   CheckCircle2,
+  Eye,
+  EyeOff,
   KeyRound,
   LockKeyhole,
   MapPin,
@@ -88,6 +90,40 @@ const emptyCreateDraft: CreateAccountDraft = {
   username: '',
 };
 
+function PasswordField(props: {
+  readonly busy?: boolean;
+  readonly label: string;
+  readonly onChange: (value: string) => void;
+  readonly value: string;
+}) {
+  const [visible, setVisible] = useState(false);
+  return (
+    <label className="admin-field">
+      <span>{props.label}</span>
+      <div className="password-box">
+        <input
+          autoComplete="new-password"
+          disabled={props.busy}
+          maxLength={256}
+          minLength={6}
+          onChange={(event) => props.onChange(event.target.value)}
+          required
+          type={visible ? 'text' : 'password'}
+          value={props.value}
+        />
+        <button
+          aria-label={visible ? 'Ẩn mật khẩu' : 'Hiện mật khẩu'}
+          className="password-toggle"
+          onClick={() => setVisible((value) => !value)}
+          type="button"
+        >
+          {visible ? <EyeOff aria-hidden="true" size={18} /> : <Eye aria-hidden="true" size={18} />}
+        </button>
+      </div>
+    </label>
+  );
+}
+
 export function accountQueryFromFilters(filters: AccountFilters, page: number): ListAccountsQuery {
   return {
     page,
@@ -99,7 +135,7 @@ export function accountQueryFromFilters(filters: AccountFilters, page: number): 
 }
 
 export function validatePasswordReset(password: string, confirmation: string): string | null {
-  if (password.length < 12) return 'Mật khẩu mới phải có ít nhất 12 ký tự.';
+  if (password.length < 6) return 'Mật khẩu mới phải có ít nhất 6 ký tự.';
   if (password.length > 256) return 'Mật khẩu mới không được quá 256 ký tự.';
   if (password !== confirmation) return 'Hai lần nhập mật khẩu chưa trùng khớp.';
   return null;
@@ -1102,32 +1138,18 @@ function CreateAccountForm({
             {storesError ? <small className="admin-field-error">{storesError}</small> : null}
           </label>
         ) : null}
-        <label className="admin-field">
-          <span>Mật khẩu ban đầu</span>
-          <input
-            autoComplete="new-password"
-            disabled={busy}
-            maxLength={256}
-            minLength={12}
-            onChange={(event) => update('password', event.target.value)}
-            required
-            type="password"
-            value={draft.password}
-          />
-        </label>
-        <label className="admin-field">
-          <span>Nhập lại mật khẩu</span>
-          <input
-            autoComplete="new-password"
-            disabled={busy}
-            maxLength={256}
-            minLength={12}
-            onChange={(event) => update('confirmPassword', event.target.value)}
-            required
-            type="password"
-            value={draft.confirmPassword}
-          />
-        </label>
+        <PasswordField
+          busy={busy}
+          label="Mật khẩu ban đầu"
+          onChange={(value) => update('password', value)}
+          value={draft.password}
+        />
+        <PasswordField
+          busy={busy}
+          label="Nhập lại mật khẩu"
+          onChange={(value) => update('confirmPassword', value)}
+          value={draft.confirmPassword}
+        />
         <div className="admin-form-actions">
           <Button busy={busy} className="admin-clickable" type="submit">
             Tạo tài khoản
@@ -1243,32 +1265,18 @@ function PasswordResetPanel({
         </button>
       </div>
       <form className="admin-form-grid" onSubmit={submit}>
-        <label className="admin-field">
-          <span>Mật khẩu mới</span>
-          <input
-            autoComplete="new-password"
-            disabled={busy}
-            maxLength={256}
-            minLength={12}
-            onChange={(event) => setPassword(event.target.value)}
-            required
-            type="password"
-            value={password}
-          />
-        </label>
-        <label className="admin-field">
-          <span>Nhập lại mật khẩu mới</span>
-          <input
-            autoComplete="new-password"
-            disabled={busy}
-            maxLength={256}
-            minLength={12}
-            onChange={(event) => setConfirmation(event.target.value)}
-            required
-            type="password"
-            value={confirmation}
-          />
-        </label>
+        <PasswordField
+          busy={busy}
+          label="Mật khẩu mới"
+          onChange={(value) => setPassword(value)}
+          value={password}
+        />
+        <PasswordField
+          busy={busy}
+          label="Nhập lại mật khẩu mới"
+          onChange={(value) => setConfirmation(value)}
+          value={confirmation}
+        />
         {validationError || error ? (
           <p className="admin-feedback admin-feedback--error" role="alert">
             {validationError || error}

@@ -7,7 +7,7 @@ import { hashPassword } from './security.js';
 
 const BootstrapInputSchema = LoginRequestSchema.extend({
   displayName: z.string().trim().min(1).max(120),
-  password: z.string().min(12).max(256),
+  password: z.string().min(6).max(256),
 });
 
 async function main(): Promise<void> {

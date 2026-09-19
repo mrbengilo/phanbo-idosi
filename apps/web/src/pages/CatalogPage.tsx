@@ -59,10 +59,16 @@ function roundDivide(numerator: bigint, denominator: bigint): bigint {
   return (numerator * 2n + denominator) / (denominator * 2n);
 }
 
+/** Renders milli-units compactly: whole numbers stay plain, decimals keep at most two digits. */
 function formatThousandths(value: bigint): string {
   const whole = value / 1_000n;
-  const fraction = String(value % 1_000n).padStart(3, '0');
-  return `${whole.toLocaleString('vi-VN')},${fraction}`;
+  const milli = value % 1_000n;
+  const wholeText = whole.toLocaleString('vi-VN');
+  if (milli === 0n) return wholeText;
+  const hundredths = (milli + 5n) / 10n;
+  if (hundredths === 0n) return wholeText;
+  if (hundredths % 10n === 0n) return `${wholeText},${hundredths / 10n}`;
+  return `${wholeText},${String(hundredths).padStart(2, '0')}`;
 }
 
 export function formatConversionRatios(conversion: ProductConversion | null): {

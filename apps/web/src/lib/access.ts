@@ -8,9 +8,9 @@ export interface RouteAccessPolicy {
 export const routeAccessPolicies = {
   '/': { roles: ['ADMIN', 'HTKD', 'STORE'] },
   '/allocations': { roles: ['ADMIN', 'HTKD', 'STORE'] },
-  '/requests': { roles: ['ADMIN', 'HTKD', 'STORE'] },
+  '/requests': { roles: ['HTKD', 'STORE'] },
   '/receive': {
-    roles: ['ADMIN', 'HTKD', 'STORE'],
+    roles: ['HTKD', 'STORE'],
     storeKinds: ['RETAIL'],
   },
   '/inventory': {
@@ -18,7 +18,7 @@ export const routeAccessPolicies = {
     storeKinds: ['RETAIL'],
   },
   '/open-bag': {
-    roles: ['ADMIN', 'HTKD', 'STORE'],
+    roles: ['HTKD', 'STORE'],
     storeKinds: ['RETAIL'],
   },
   '/sales': {

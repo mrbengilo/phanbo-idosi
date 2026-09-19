@@ -109,7 +109,7 @@ export type Session = z.infer<typeof SessionSchema>;
 export const LoginRequestSchema = z
   .object({
     username: z.string().trim().min(3).max(80),
-    password: z.string().min(8).max(256),
+    password: z.string().min(6).max(256),
   })
   .strict();
 export type LoginRequest = z.infer<typeof LoginRequestSchema>;
@@ -129,7 +129,7 @@ const CreateAccountShapeSchema = z
   .object({
     username: z.string().trim().min(3).max(80),
     displayName: z.string().trim().min(1).max(120),
-    password: z.string().min(12).max(256),
+    password: z.string().min(6).max(256),
     role: AccountRoleSchema,
     storeId: EntityIdSchema.nullable().default(null),
   })
@@ -186,7 +186,7 @@ export type UpdateAccountResponse = z.infer<typeof UpdateAccountResponseSchema>;
 
 export const ResetPasswordRequestSchema = z
   .object({
-    newPassword: z.string().min(12).max(256),
+    newPassword: z.string().min(6).max(256),
     expectedSessionVersion: z.number().int().nonnegative(),
     revokeSessions: z.literal(true).default(true),
   })
