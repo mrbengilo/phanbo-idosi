@@ -12,6 +12,7 @@ import {
   ListOrderSessionsResponseSchema,
   ListStoreOrderRequestsResponseSchema,
   ListStoresResponseSchema,
+  WarehouseBalancesResponseSchema,
   ListWaitTicketsResponseSchema,
   LoginResponseSchema,
   LogoutResponseSchema,
@@ -46,6 +47,7 @@ import {
   type RespondPriorityOfferRequest,
   type ReturnReceiptForCorrectionRequest,
   type Session,
+  type WarehouseBalancesResponse,
   type Store,
   type StoreOrderRequest,
   type SubmitStoreReceiptRequest,
@@ -563,4 +565,50 @@ export function finalizeStoreReceipt(
     input,
     idempotencyKey,
   );
+}
+
+export async function listWarehouseBalances(): Promise<WarehouseBalancesResponse> {
+  const payload = await request('/warehouse-balances', {
+    cache: 'no-store',
+    credentials: 'include',
+    headers: { Accept: 'application/json' },
+  });
+  return WarehouseBalancesResponseSchema.parse(payload);
+}
+
+export async function createWarehouseAdjustment(
+  input: {
+    direction: 'INCREASE' | 'DECREASE';
+    reasonCode:
+      | 'COUNT_CORRECTION'
+      | 'DAMAGE'
+      | 'RETURN'
+      | 'RECEIPT_CORRECTION'
+      | 'OUTBOUND_CORRECTION'
+      | 'OTHER';
+    reason: string;
+    lines: readonly {
+      readonly productId: string;
+      readonly amount: { readonly kind: 'UNIT'; readonly quantity: number };
+      readonly expectedVersion: number;
+    }[];
+  },
+  idempotencyKey: string,
+): Promise<{
+  data: {
+    adjustmentId: string;
+    entries: readonly { productId: string; ledgerEntryId: string; onHandQuantity: number }[];
+  };
+}> {
+  const payload = await request('/warehouse-adjustments', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json', 'idempotency-key': idempotencyKey },
+    body: JSON.stringify(input),
+  });
+  return payload as {
+    data: {
+      adjustmentId: string;
+      entries: readonly { productId: string; ledgerEntryId: string; onHandQuantity: number }[];
+    };
+  };
 }

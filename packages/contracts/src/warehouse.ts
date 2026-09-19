@@ -154,3 +154,26 @@ export const CreateWarehouseAdjustmentResponseSchema = z
 export type CreateWarehouseAdjustmentResponse = z.infer<
   typeof CreateWarehouseAdjustmentResponseSchema
 >;
+
+export const WarehouseStockInputEntrySchema = z
+  .object({
+    productId: EntityIdSchema,
+    ledgerEntryId: EntityIdSchema,
+    onHandQuantity: z.number().int().nonnegative(),
+  })
+  .strict();
+export type WarehouseStockInputEntry = z.infer<typeof WarehouseStockInputEntrySchema>;
+
+export const CreateWarehouseStockInputResponseSchema = z
+  .object({
+    data: z
+      .object({
+        adjustmentId: EntityIdSchema,
+        entries: z.array(WarehouseStockInputEntrySchema),
+      })
+      .strict(),
+  })
+  .strict();
+export type CreateWarehouseStockInputResponse = z.infer<
+  typeof CreateWarehouseStockInputResponseSchema
+>;

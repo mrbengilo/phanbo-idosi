@@ -1,3 +1,5 @@
+import { randomUUID } from 'node:crypto';
+
 import type {
   Account,
   AdminAuditLog,
@@ -83,7 +85,12 @@ import type {
   CancelStoreTransferRequest,
   WarehouseBalancesResponse,
 } from '@idosi/contracts';
-import { StoreGroupSchema, StoreSchema } from '@idosi/contracts';
+import {
+  type CreateWarehouseAdjustmentRequest,
+  type WarehouseAdjustment,
+  StoreGroupSchema,
+  StoreSchema,
+} from '@idosi/contracts';
 import {
   ActiveWaitTicketExistsError,
   auditLogs,
@@ -180,6 +187,7 @@ import {
   StoreTransferAuthorizationError,
   StoreTransferNotFoundError,
   storeTransfers,
+  applyWarehouseMovement,
   withAdvisoryLock,
   withIdempotency,
   withSerializableTransaction,
@@ -1016,6 +1024,50 @@ export class PostgresWarehouseRepository implements WarehouseRepository {
         replayed: result.replayed,
       };
     });
+  }
+
+  public async createWarehouseAdjustment(
+    actor: AuthenticatedPrincipal,
+    input: CreateWarehouseAdjustmentRequest,
+    idempotencyKey: string,
+    context: RequestContext,
+  ): Promise<WarehouseAdjustment> {
+    if (actor.role !== 'ADMIN') throw forbidden('Chỉ Admin được điều chỉnh kho tổng');
+    const now = new Date();
+    const adjustmentId = randomUUID();
+    const delta = input.direction === 'INCREASE' ? 1 : -1;
+    let sequence = 0;
+    await withSerializableTransaction(db, async (tx) => {
+      for (const line of input.lines) {
+        sequence += 1;
+        const quantity =
+          line.amount.kind === 'UNIT'
+            ? line.amount.quantity
+            : Math.round(Number(line.amount.value));
+        await applyWarehouseMovement(tx, {
+          productId: line.productId,
+          eventType: 'adjustment',
+          onHandDelta: delta * quantity,
+          reservedDelta: 0,
+          sourceType: 'WAREHOUSE_ADJUSTMENT',
+          sourceId: adjustmentId,
+          eventSequence: sequence,
+          reason: input.reasonCode,
+          metadata: { note: input.reason, idempotencyKey, requestId: context.requestId },
+          actorUserId: actor.accountId,
+          occurredAt: now,
+        });
+      }
+    });
+    return {
+      id: adjustmentId,
+      direction: input.direction,
+      reasonCode: input.reasonCode,
+      reason: input.reason,
+      lines: [],
+      createdByAccountId: actor.accountId,
+      createdAt: now.toISOString(),
+    };
   }
 
   public async listWarehouseBalances(

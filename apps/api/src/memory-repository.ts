@@ -86,6 +86,8 @@ import type {
   ReceiveStoreTransferRequest,
   CancelStoreTransferRequest,
   WarehouseBalancesResponse,
+  CreateWarehouseAdjustmentRequest,
+  WarehouseAdjustment,
 } from '@idosi/contracts';
 import {
   PRODUCT_CONVERSION_SEEDS,
@@ -937,6 +939,45 @@ export class MemoryWarehouseRepository implements WarehouseRepository {
       );
     }
     return { data: structuredClone(updated), replayed: false };
+  }
+
+  public async createWarehouseAdjustment(
+    actor: AuthenticatedPrincipal,
+    input: CreateWarehouseAdjustmentRequest,
+    _idempotencyKey: string,
+    _context: RequestContext,
+  ): Promise<WarehouseAdjustment> {
+    if (actor.role !== 'ADMIN') throw forbidden('Chỉ Admin được điều chỉnh kho tổng');
+    const now = this.now().toISOString();
+    const adjustment: WarehouseAdjustment = {
+      id: `adj-${randomUUID()}`,
+      direction: input.direction,
+      reasonCode: input.reasonCode,
+      reason: input.reason,
+      lines: [],
+      createdByAccountId: actor.accountId,
+      createdAt: now,
+    };
+    for (const line of input.lines) {
+      const balance = this.warehouseBalances.get(line.productId) ?? {
+        onHandQuantity: 0,
+        reservedQuantity: 0,
+        version: 0,
+        updatedAt: now,
+      };
+      const delta = input.direction === 'INCREASE' ? 1 : -1;
+      const quantity =
+        line.amount.kind === 'UNIT' ? line.amount.quantity : Math.round(Number(line.amount.value));
+      const onHandQuantity = balance.onHandQuantity + delta * quantity;
+      if (onHandQuantity < 0) throw conflict('Warehouse adjustment would produce negative stock.');
+      this.warehouseBalances.set(line.productId, {
+        onHandQuantity,
+        reservedQuantity: balance.reservedQuantity,
+        version: balance.version + 1,
+        updatedAt: now,
+      });
+    }
+    return adjustment;
   }
 
   public async listWarehouseBalances(

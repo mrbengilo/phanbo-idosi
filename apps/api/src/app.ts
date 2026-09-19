@@ -22,6 +22,7 @@ import {
   GetIdosiStatisticsQuerySchema,
   GetOperationalSettingsQuerySchema,
   HtkdAssignmentParamsSchema,
+  CreateWarehouseAdjustmentRequestSchema,
   IdempotencyHeadersSchema,
   IsoDateSchema,
   InboundReceiptParamsSchema,
@@ -578,6 +579,23 @@ export async function createApi(options: CreateApiOptions = {}): Promise<Fastify
         requestContext(request),
       ),
     };
+  });
+
+  app.post('/api/v1/warehouse-adjustments', async (request) => {
+    const session = await authenticate(request, repository);
+    requireRole(session.principal, ['ADMIN']);
+    const body = CreateWarehouseAdjustmentRequestSchema.parse(request.body);
+    const rawKey = request.headers['idempotency-key'];
+    const idempotencyKey =
+      typeof rawKey === 'string' && rawKey.length >= 8
+        ? rawKey
+        : `${session.principal.accountId}:stock-input:${Date.now()}`;
+    return repository.createWarehouseAdjustment(
+      session.principal,
+      body,
+      idempotencyKey,
+      requestContext(request),
+    );
   });
 
   app.get('/api/v1/warehouse-balances', async (request) => {

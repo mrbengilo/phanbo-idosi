@@ -82,6 +82,8 @@ import type {
   ReceiveStoreTransferRequest,
   CancelStoreTransferRequest,
   WarehouseBalancesResponse,
+  CreateWarehouseAdjustmentRequest,
+  WarehouseAdjustment,
   UpdateOperationalSettingsRequest,
   UpdateStoreGroupRequest,
   UpdateStoreRequest,
@@ -307,6 +309,12 @@ export interface WarehouseRepository {
   ): Promise<IdempotentResource<OrderSession>>;
 
   listWarehouseBalances(actor: AuthenticatedPrincipal): Promise<WarehouseBalancesResponse>;
+  createWarehouseAdjustment(
+    actor: AuthenticatedPrincipal,
+    input: CreateWarehouseAdjustmentRequest,
+    idempotencyKey: string,
+    context: RequestContext,
+  ): Promise<WarehouseAdjustment>;
   listInboundReceipts(
     actor: AuthenticatedPrincipal,
     query: ListInboundReceiptsQuery,

@@ -16,6 +16,7 @@ import {
   ShoppingBag,
   XCircle,
 } from 'lucide-react';
+import clsx from 'clsx';
 import { useMemo, useRef, useState } from 'react';
 import type { AppOutletContext } from '../../components/AppShell';
 import { Badge } from '../../components/Badge';
@@ -24,8 +25,15 @@ import { EmptyState } from '../../components/EmptyState';
 import { PageHeader } from '../../components/PageHeader';
 import { DashboardSkeleton } from '../../components/Skeleton';
 import { StatCard } from '../../components/StatCard';
-import { ApiClientError, listAccessibleStores, listCatalog } from '../../lib/api';
+import {
+  ApiClientError,
+  createWarehouseAdjustment,
+  listAccessibleStores,
+  listCatalog,
+  listWarehouseBalances,
+} from '../../lib/api';
 import { useSession } from '../../lib/auth';
+import { businessDate } from '../../lib/business-time';
 import { formatVnd } from '../../lib/format';
 import { IdosiStatisticsPanel } from '../idosi/IdosiStatisticsPanel';
 import {
@@ -158,6 +166,251 @@ function useInventorySources(role: AppOutletContext['role']) {
   return { catalogQuery, defaultStoreId, principalStoreId, sessionQuery, stores, storesQuery };
 }
 
+const vatDate = businessDate();
+interface VatRow {
+  readonly date: string;
+  readonly amount: number;
+  readonly ratePercent: number;
+}
+
+function AdminWarehouseInputPanel() {
+  const queryClient = useQueryClient();
+  const catalogQuery = useQuery({ queryFn: listCatalog, queryKey: ['catalog'], retry: false });
+  const balancesQuery = useQuery({
+    queryFn: listWarehouseBalances,
+    queryKey: ['warehouse-balances-admin'],
+    retry: false,
+  });
+  const [selected, setSelected] = useState<ReadonlyMap<string, number>>(() => new Map());
+  const [vatRows, setVatRows] = useState<readonly VatRow[]>([]);
+  const [note, setNote] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [message, setMessage] = useState<{ kind: 'error' | 'success'; text: string } | null>(null);
+  const products = (catalogQuery.data ?? []).filter((product) => product.status === 'ACTIVE');
+  const versionByProduct = useMemo(
+    () =>
+      new Map<string, number>(
+        (balancesQuery.data?.data ?? []).map((row: { productId: string; version: number }) => [
+          row.productId,
+          row.version,
+        ]),
+      ),
+    [balancesQuery.data],
+  );
+
+  const toggle = (productId: string, checked: boolean) => {
+    setSelected((current) => {
+      const next = new Map(current);
+      if (checked) next.set(productId, 1);
+      else next.delete(productId);
+      return next;
+    });
+  };
+  const setQty = (productId: string, qty: number) =>
+    setSelected((current) => new Map(current).set(productId, Math.max(1, qty)));
+
+  const save = async () => {
+    if (selected.size === 0 || busy) return;
+    setBusy(true);
+    setMessage(null);
+    try {
+      const lines = [...selected.entries()].map(([productId, quantity]) => ({
+        productId,
+        amount: { kind: 'UNIT' as const, quantity },
+        expectedVersion: versionByProduct.get(productId) ?? 0,
+      }));
+      const vatText = vatRows
+        .map(
+          (row) =>
+            'VAT ' +
+            row.ratePercent +
+            '% ngày ' +
+            row.date +
+            ': ' +
+            row.amount.toLocaleString('vi-VN') +
+            'đ',
+        )
+        .join('; ');
+      const reason =
+        'Nhập kho hàng tổng' +
+        (note.trim() ? ' — ' + note.trim() : '') +
+        (vatText ? ' — ' + vatText : '');
+      const response = await createWarehouseAdjustment(
+        {
+          direction: 'INCREASE',
+          reasonCode: 'COUNT_CORRECTION',
+          reason,
+          lines,
+        },
+        'stock-input:' + Date.now(),
+      );
+      setMessage({
+        kind: 'success',
+        text: 'Đã nhập ' + response.data.entries.length + ' mặt hàng vào kho tổng.',
+      });
+      setSelected(new Map());
+      setVatRows([]);
+      setNote('');
+      await queryClient.invalidateQueries({ queryKey: ['warehouse-balances-admin'] });
+    } catch (cause) {
+      setMessage({
+        kind: 'error',
+        text: cause instanceof Error ? cause.message : 'Không thể nhập kho. Vui lòng thử lại.',
+      });
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <section className="panel">
+      <div className="section-heading section-heading--compact">
+        <div>
+          <h2>Nhập kho hàng tổng</h2>
+          <p>Chọn mặt hàng và số bao; kho này là nguồn hàng cho các cửa hàng đặt.</p>
+        </div>
+      </div>
+      {message ? (
+        <div className={message.kind === 'error' ? 'form-error' : 'inline-notice'} role="status">
+          {message.text}
+        </div>
+      ) : null}
+      <div className="product-check-list">
+        {products.map((product) => {
+          const qty = selected.get(product.id);
+          const isSelected = qty !== undefined;
+          return (
+            <div
+              className={clsx('product-check', isSelected && 'product-check--selected')}
+              key={product.id}
+            >
+              <label className="product-check__label">
+                <input
+                  checked={isSelected}
+                  onChange={(event) => toggle(product.id, event.target.checked)}
+                  type="checkbox"
+                />
+                <span>{product.name}</span>
+              </label>
+              {isSelected ? (
+                <div className="qty-stepper">
+                  <button
+                    aria-label={'Giảm số bao ' + product.name}
+                    disabled={(qty ?? 1) <= 1}
+                    onClick={() => setQty(product.id, Math.max(1, (qty ?? 1) - 1))}
+                    type="button"
+                  >
+                    −
+                  </button>
+                  <input
+                    aria-label={'Số bao ' + product.name}
+                    min="1"
+                    onChange={(event) =>
+                      setQty(product.id, Math.max(1, event.target.valueAsNumber || 1))
+                    }
+                    type="number"
+                    value={qty}
+                  />
+                  <button
+                    aria-label={'Tăng số bao ' + product.name}
+                    onClick={() => setQty(product.id, (qty ?? 0) + 1)}
+                    type="button"
+                  >
+                    +
+                  </button>
+                  <span className="qty-stepper__unit">bao</span>
+                </div>
+              ) : null}
+            </div>
+          );
+        })}
+      </div>
+      <div style={{ marginTop: 16 }}>
+        <div className="section-heading section-heading--compact">
+          <div>
+            <h3>Thuế VAT đầu vào</h3>
+          </div>
+          <Button
+            onClick={() =>
+              setVatRows((rows) => [...rows, { date: vatDate, amount: 0, ratePercent: 10 }])
+            }
+            tone="secondary"
+          >
+            + Thêm dòng VAT
+          </Button>
+        </div>
+        {vatRows.map((row, index) => (
+          <div
+            key={row.date + '-' + String(index)}
+            style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 8 }}
+          >
+            <input
+              aria-label="Ngày VAT"
+              onChange={(event) =>
+                setVatRows((rows) =>
+                  rows.map((r, i) => (i === index ? { ...r, date: event.target.value } : r)),
+                )
+              }
+              type="date"
+              value={row.date}
+            />
+            <input
+              aria-label="Số tiền VAT"
+              min="0"
+              onChange={(event) =>
+                setVatRows((rows) =>
+                  rows.map((r, i) =>
+                    i === index ? { ...r, amount: event.target.valueAsNumber || 0 } : r,
+                  ),
+                )
+              }
+              placeholder="Số tiền (đ)"
+              type="number"
+              value={row.amount}
+            />
+            <input
+              aria-label="Phần trăm VAT"
+              max="100"
+              min="0"
+              onChange={(event) =>
+                setVatRows((rows) =>
+                  rows.map((r, i) =>
+                    i === index ? { ...r, ratePercent: event.target.valueAsNumber || 0 } : r,
+                  ),
+                )
+              }
+              placeholder="% VAT"
+              style={{ maxWidth: 100 }}
+              type="number"
+              value={row.ratePercent}
+            />
+            <button
+              aria-label="Xóa dòng VAT"
+              onClick={() => setVatRows((rows) => rows.filter((_, i) => i !== index))}
+              type="button"
+            >
+              <XCircle aria-hidden="true" size={17} />
+            </button>
+          </div>
+        ))}
+      </div>
+      <label style={{ display: 'block', margin: '12px 0' }}>
+        Ghi chú
+        <input
+          maxLength={500}
+          onChange={(event) => setNote(event.target.value)}
+          placeholder="Ghi chú đợt nhập (không bắt buộc)"
+          style={{ width: '100%' }}
+          value={note}
+        />
+      </label>
+      <Button busy={busy} disabled={selected.size === 0 || busy} onClick={() => void save()}>
+        Lưu nhập kho
+      </Button>
+    </section>
+  );
+}
+
 export function ProductionInventoryPage({ role }: AppOutletContext) {
   const { catalogQuery, defaultStoreId, sessionQuery, stores, storesQuery } =
     useInventorySources(role);
@@ -213,6 +466,7 @@ export function ProductionInventoryPage({ role }: AppOutletContext) {
 
   return (
     <>
+      {role === 'ADMIN' ? <AdminWarehouseInputPanel /> : null}
       <PageHeader
         actions={
           <div className="inventory-actions">
