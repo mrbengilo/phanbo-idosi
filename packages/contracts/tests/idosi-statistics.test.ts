@@ -156,4 +156,38 @@ describe('IDOSI statistics contracts and gateway', () => {
       }),
     ).rejects.toMatchObject({ code: 'IDOSI_RESPONSE_TOO_LARGE' });
   });
+
+  it('surfaces the upstream error envelope when idosi.io.vn rejects the call', async () => {
+    const fetchMock = vi.fn(
+      async () =>
+        new Response(
+          JSON.stringify({
+            ok: false,
+            error: {
+              code: 'WAREHOUSE_API_NOT_CONFIGURED',
+              message: 'API thống kê kho chưa được cấu hình khóa bảo mật.',
+            },
+            serverTime: '2026-09-19T09:22:54.009Z',
+            requestId: 'idosi-request-4',
+          }),
+          { status: 503 },
+        ),
+    );
+
+    await expect(
+      fetchIdosiOrderStatistics({
+        endpoint: 'https://idosi.io.vn/api/integrations/warehouse/v1/order-statistics',
+        secret: 'server-secret',
+        storeCode: 'S01',
+        scope: { period: '2026-09', date: null, shiftId: null, paymentMethod: null },
+        requestId: 'warehouse-request-4',
+        fetch: fetchMock,
+      }),
+    ).rejects.toMatchObject({
+      code: 'IDOSI_REQUEST_FAILED',
+      upstreamStatus: 503,
+      upstreamCode: 'WAREHOUSE_API_NOT_CONFIGURED',
+      message: expect.stringContaining('chưa được cấu hình khóa bảo mật'),
+    });
+  });
 });

@@ -292,11 +292,22 @@ export interface FetchIdosiStatisticsOptions {
 export type IdosiGatewayErrorCode =
   'IDOSI_REQUEST_FAILED' | 'IDOSI_RESPONSE_INVALID' | 'IDOSI_RESPONSE_TOO_LARGE';
 
+export const IdosiUpstreamErrorEnvelopeSchema = z
+  .object({
+    ok: z.literal(false),
+    error: z.object({
+      code: z.string().trim().min(1).max(128),
+      message: z.string().trim().min(1).max(1_000),
+    }),
+  })
+  .passthrough();
+
 export class IdosiGatewayError extends Error {
   public constructor(
     public readonly code: IdosiGatewayErrorCode,
     message: string,
     public readonly upstreamStatus: number | null = null,
+    public readonly upstreamCode: string | null = null,
   ) {
     super(message);
     this.name = 'IdosiGatewayError';
@@ -347,11 +358,14 @@ export async function fetchIdosiOrderStatistics(
   }
 
   if (!response.ok) {
-    await response.body?.cancel().catch(() => undefined);
+    const upstream = await readUpstreamError(response);
     throw new IdosiGatewayError(
       'IDOSI_REQUEST_FAILED',
-      `API thống kê IDOSI phản hồi HTTP ${response.status}.`,
+      upstream
+        ? `API thống kê IDOSI từ chối yêu cầu (${upstream.code}): ${upstream.message}`
+        : `API thống kê IDOSI phản hồi HTTP ${response.status}.`,
       response.status,
+      upstream?.code ?? null,
     );
   }
 
@@ -365,6 +379,22 @@ export async function fetchIdosiOrderStatistics(
     );
   }
   return parsed.data;
+}
+
+const UPSTREAM_ERROR_MAX_BYTES = 8_192;
+
+/** Surfaces the upstream error envelope ({ok:false,error:{code,message}}) when idosi.io.vn rejects a call. */
+async function readUpstreamError(
+  response: Response,
+): Promise<{ readonly code: string; readonly message: string } | null> {
+  try {
+    const payload = await readBoundedJson(response, UPSTREAM_ERROR_MAX_BYTES);
+    const parsed = IdosiUpstreamErrorEnvelopeSchema.safeParse(payload);
+    if (!parsed.success) return null;
+    return parsed.data.error;
+  } catch {
+    return null;
+  }
 }
 
 async function readBoundedJson(response: Response, maxBytes: number): Promise<unknown> {
